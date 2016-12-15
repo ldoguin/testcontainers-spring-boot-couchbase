@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -32,10 +33,9 @@ import java.util.List;
 /**
  * Created by ldoguin on 12/13/16.
  */
-
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = {TestcontainerSpringBootCouchbaseApplication.class, AbstractSpringBootTestConfig.CouchbaseConfiguration.class})
-@EnableAutoConfiguration(exclude = CouchbaseAutoConfiguration.class)
+@SpringBootTest
+@Import(CouchbaseConfiguration.class)
 public abstract class AbstractSpringBootTestConfig {
 
     public static final String clusterUser = "Administrator";
@@ -50,56 +50,5 @@ public abstract class AbstractSpringBootTestConfig {
             .withClusterUsername(clusterUser)
             .withClusterPassword(clusterPassword);
 
-    @TestConfiguration
-    static class CouchbaseConfiguration {
 
-        private CouchbaseContainer couchbaseContainer;
-
-        @PostConstruct
-        public void init() throws Exception {
-            couchbaseContainer = AbstractSpringBootTestConfig.couchbaseContainer;
-            BucketSettings settings = DefaultBucketSettings.builder()
-                    .enableFlush(true).name("default").quota(100).replicas(0).type(BucketType.COUCHBASE).build();
-            ClusterManager clusterManager = couchbaseContainer.geCouchbaseCluster().clusterManager(clusterUser, clusterPassword);
-            if (!clusterManager.hasBucket("default")){
-                settings =  clusterManager.insertBucket(settings);
-                waitForContainer();
-            }
-
-        }
-
-        public void waitForContainer(){
-            CouchbaseWaitStrategy s = new CouchbaseWaitStrategy();
-            s.withBasicCredentials(clusterUser, clusterPassword);
-            s.waitUntilReady(couchbaseContainer);
-        }
-
-
-        @Bean
-        @Primary
-        public CouchbaseEnvironment couchbaseEnvironment() throws Exception {
-            return couchbaseContainer.getCouchbaseEnvironnement();
-        }
-
-        @Bean
-        @Primary
-        public Cluster couchbaseCluster() throws Exception {
-            return couchbaseContainer.geCouchbaseCluster();
-        }
-
-        @Bean
-        @Primary
-        public ClusterInfo couchbaseClusterInfo() throws Exception {
-            Cluster cc = couchbaseCluster();
-            ClusterManager manager = cc.clusterManager(clusterUser, clusterPassword);
-            return manager.info();
-        }
-
-        @Bean
-        @Primary
-        public Bucket couchbaseClient() throws Exception {
-            return couchbaseContainer.geCouchbaseCluster().openBucket("default");
-        }
-
-    }
 }
